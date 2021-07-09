@@ -72,6 +72,7 @@ export interface UserDefaultTagCar {
   car?: Car;
   tag?: Tag;
   errorCodes?: StartTransactionErrorCode[];
+  canListUsers?: boolean;
 }
 
 export interface UserToken {

@@ -235,6 +235,9 @@ export class AuthorizationService {
 
   public canStopTransaction(siteArea: SiteArea, badgeID: string) {
     if (this.canAccess(Entity.CHARGING_STATION, Action.REMOTE_STOP_TRANSACTION)) {
+      if (!!this.loggedUser && !!this.loggedUser.tagIDs && this.loggedUser.tagIDs.includes(badgeID)) {
+        return true;
+      }
       if (this.componentService.isActive(TenantComponents.ORGANIZATION)) {
         return siteArea && (this.isSiteAdmin(siteArea.siteID) || this.isAdmin());
       }

@@ -27,7 +27,7 @@ export class TagsDialogComponent extends DialogTableDataComponent<Tag> {
     const items: KeyValue[] = [];
     if (!Utils.isEmptyArray(selectedRows)) {
       selectedRows.forEach((row) => {
-        items.push({ key: row.id, value: row.id, objectRef: row });
+        items.push({ key: row.visualID, value: row.visualID, objectRef: row });
       });
     }
     return items;

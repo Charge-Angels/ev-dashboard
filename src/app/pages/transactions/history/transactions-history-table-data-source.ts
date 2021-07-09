@@ -290,11 +290,11 @@ export class TransactionsHistoryTableDataSource extends TableDataSource<Transact
         formatter: (user: User) => this.appUserNamePipe.transform(user),
       },
       {
-        id: 'tagID',
-        name: 'transactions.badge_id',
+        id: 'tag.visualID',
+        name: 'tags.visual_id',
         headerClass: 'col-15p',
         class: 'text-left col-15p',
-        formatter: (tagID: string) => tagID ? tagID : '-'
+        formatter: (visualID: string) => visualID ? visualID : '-'
       });
     }
     if (this.componentService.isActive(TenantComponents.CAR)) {

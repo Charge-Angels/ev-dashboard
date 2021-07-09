@@ -714,9 +714,9 @@ export class Utils {
       return '-';
     }
     if (tag.description) {
-      tagName = `${tag.description} ('${tag.id}')`;
+      tagName = tag.id ? `${tag.description} ('${tag.id}')` : `${tag.description} ('${tag.visualID}')`;
     } else {
-      tagName = `${tag.id}`;
+      tagName = tag.id ? `${tag.id}`: `${tag.visualID}`;
     }
     return tagName;
   }

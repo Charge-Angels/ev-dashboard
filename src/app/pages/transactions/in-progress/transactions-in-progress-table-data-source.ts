@@ -208,11 +208,11 @@ export class TransactionsInProgressTableDataSource extends TableDataSource<Trans
         formatter: (value: User) => this.appUserNamePipe.transform(value),
       },
       {
-        id: 'tagID',
-        name: 'transactions.badge_id',
+        id: 'tag.visualID',
+        name: 'tags.visual_id',
         headerClass: 'col-15p',
         class: 'text-left col-15p',
-        formatter: (tagID: string) => tagID ? tagID : '-'
+        formatter: (visualID: string) => visualID ? visualID : '-'
       }
       );
     }

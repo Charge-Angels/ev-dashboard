@@ -48,6 +48,7 @@ export interface ChargingStation extends TableData {
   ocppStandardParameters?: KeyValue[];
   ocppVendorParameters?: KeyValue[];
   distanceMeters?: number;
+  siteID?: string;
 }
 
 export enum OCPPProtocol {

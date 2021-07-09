@@ -37,8 +37,9 @@ export class TableChargingStationsStartTransactionAction implements TableAction 
     return this.action;
   }
 
-  private startTransaction(chargingStationsStartTransactionDialogComponent: ComponentType<unknown>, chargingStation: ChargingStation,
-    connector: Connector, dialogService: DialogService, dialog: MatDialog, translateService: TranslateService, messageService: MessageService,
+  private startTransaction(chargingStationsStartTransactionDialogComponent: ComponentType<unknown>,
+    chargingStation: ChargingStation, connector: Connector, dialogService: DialogService, dialog: MatDialog,
+    translateService: TranslateService, messageService: MessageService,
     centralServerService: CentralServerService, spinnerService: SpinnerService, router: Router,
     refresh?: () => Observable<void>) {
     if (chargingStation.inactive) {
@@ -68,21 +69,24 @@ export class TableChargingStationsStartTransactionAction implements TableAction 
       title: translateService.instant('chargers.start_transaction_details_title', {
         chargeBoxID: chargingStation.id
       }),
-      chargingStationID: chargingStation.id
+      chargingStationID: chargingStation.id,
+      siteID: chargingStation.siteID
     };
     // Show
     const dialogRef = dialog.open(chargingStationsStartTransactionDialogComponent, dialogConfig);
     dialogRef.afterClosed().subscribe((startTransaction: StartTransaction) => {
       if (startTransaction) {
-        this.startTransactionForUser(chargingStation, connector, startTransaction.userFullName, startTransaction.tagID,
-          startTransaction.carID, dialogService, translateService, messageService, centralServerService, router, spinnerService, refresh);
+        this.startTransactionForUser(chargingStation, connector, startTransaction.userFullName, startTransaction.userID,
+          startTransaction.visualTagID, startTransaction.carID, dialogService, translateService, messageService,
+          centralServerService, router, spinnerService, refresh);
       }
     });
   }
 
-  private startTransactionForUser(chargingStation: ChargingStation, connector: Connector, userFullName: string, tagID: string,
-    carID: string | null, dialogService: DialogService, translateService: TranslateService, messageService: MessageService,
-    centralServerService: CentralServerService, router: Router, spinnerService: SpinnerService, refresh?: () => Observable<void>): void {
+  private startTransactionForUser(chargingStation: ChargingStation, connector: Connector, userFullName: string, userID: string,
+    visualTagID: string, carID: string | null, dialogService: DialogService, translateService: TranslateService,
+    messageService: MessageService, centralServerService: CentralServerService, router: Router,
+    spinnerService: SpinnerService, refresh?: () => Observable<void>): void {
     dialogService.createAndShowYesNoDialog(
       translateService.instant('chargers.start_transaction_title'),
       translateService.instant('chargers.start_transaction_confirm', {
@@ -92,7 +96,7 @@ export class TableChargingStationsStartTransactionAction implements TableAction 
     ).subscribe((response) => {
       if (response === ButtonType.YES) {
         // Check badge
-        if (!tagID) {
+        if (!visualTagID) {
           messageService.showErrorMessage(
             translateService.instant('chargers.start_transaction_missing_active_tag', {
               chargeBoxID: chargingStation.id,
@@ -102,7 +106,8 @@ export class TableChargingStationsStartTransactionAction implements TableAction 
         }
         spinnerService.show();
         centralServerService.chargingStationStartTransaction(
-          chargingStation.id, connector.connectorId, tagID, carID).subscribe((startTransactionResponse: ActionResponse) => {
+          chargingStation.id, connector.connectorId, userID,
+          visualTagID, carID).subscribe((startTransactionResponse: ActionResponse) => {
           spinnerService.hide();
           if (startTransactionResponse.status === OCPPGeneralResponse.ACCEPTED) {
             messageService.showSuccessMessage(

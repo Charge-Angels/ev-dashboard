@@ -69,8 +69,9 @@ export interface OcpiData {
 }
 
 export interface StartTransaction {
+  userID: string;
   userFullName: string;
-  tagID: string;
+  visualTagID?: string;
   carID?: string;
 }
 
