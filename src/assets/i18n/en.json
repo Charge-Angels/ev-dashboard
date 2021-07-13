@@ -1985,6 +1985,8 @@
   "cars": {
     "vin": "VIN",
     "license_plate": "License Plate",
+    "user": "User",
+    "assign_user": "Assign User",
     "vehicle_model": "Model",
     "vehicle_make": "Maker",
     "vehicle_model_version": "Version",

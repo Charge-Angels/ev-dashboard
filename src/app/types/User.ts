@@ -98,14 +98,6 @@ export interface UserToken {
   activeComponents?: string[];
 }
 
-export interface UserCar extends TableData, CreatedUpdatedProps {
-  id: string;
-  user: User;
-  carID: string;
-  default?: boolean;
-  owner?: boolean;
-}
-
 export interface UserSite extends TableData {
   user: User;
   siteID: string;

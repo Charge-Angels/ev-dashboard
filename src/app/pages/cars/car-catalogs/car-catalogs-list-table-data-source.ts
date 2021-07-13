@@ -257,8 +257,11 @@ export class CarCatalogsListTableDataSource extends TableDataSource<CarCatalog> 
     }
   }
 
-  public buildTableRowActions(): TableActionDef[] {
-    return [this.openAction];
+  public buildTableDynamicRowActions(carCatalog: CarCatalog): TableActionDef[] {
+    if (carCatalog.canRead) {
+      return [this.openAction];
+    }
+    return [];
   }
 
   public buildTableActionsRightDef(): TableActionDef[] {

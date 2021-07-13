@@ -25,7 +25,7 @@ import { Car, CarButtonAction, CarConverter, CarType } from '../../../types/Car'
 import ChangeNotification from '../../../types/ChangeNotification';
 import { DataResult } from '../../../types/DataResult';
 import { TableActionDef, TableColumnDef, TableDef, TableFilterDef } from '../../../types/Table';
-import { User, UserCar } from '../../../types/User';
+import { User } from '../../../types/User';
 import { Utils } from '../../../utils/Utils';
 import { CarDialogComponent } from '../car/car.dialog.component';
 import { CarCatalogImageFormatterCellComponent } from '../cell-components/car-catalog-image-formatter-cell.component';
@@ -52,7 +52,9 @@ export class CarsListTableDataSource extends TableDataSource<Car> {
   ) {
     super(spinnerService, translateService);
     // With users (shouldn't be that many users per car)
-    this.setStaticFilters([{ WithUsers: true }]);
+    this.setStaticFilters([{
+      WithUser: true
+    }]);
     // Init
     this.initDataSource();
   }
@@ -140,11 +142,11 @@ export class CarsListTableDataSource extends TableDataSource<Car> {
         formatter: (vehicleModelVersion: string) => vehicleModelVersion ? vehicleModelVersion : '-',
       },
       {
-        id: 'carUsers',
+        id: 'user',
         name: 'cars.users',
         headerClass: 'col-20p',
         class: 'col-20p',
-        formatter: (carUsers: UserCar[]) => Utils.buildCarUsersFullName(carUsers),
+        formatter: (user: User) => Utils.buildUserFullName(user),
       },
       {
         id: 'licensePlate',
@@ -165,19 +167,9 @@ export class CarsListTableDataSource extends TableDataSource<Car> {
         name: 'cars.default_car',
         headerClass: 'text-center col-10p',
         class: 'text-center col-10p',
-        formatter: (defaultCar: boolean, car: Car) => car.carUsers.find((userCar) => userCar.default) ?
-          this.translateService.instant('general.yes') : this.translateService.instant('general.no'),
-      },
-      {
-        id: 'owner',
-        name: 'cars.car_owner',
-        headerClass: 'text-center col-10p',
-        class: 'text-center col-10p',
-        formatter: (carOwner: boolean, car: Car) => car.carUsers.find((userCar) => userCar.owner) ?
-          this.translateService.instant('general.yes') : this.translateService.instant('general.no')
+        formatter: (defaultCar: boolean) => defaultCar ? this.translateService.instant('general.yes') : this.translateService.instant('general.no'),
       }
     );
-
     tableColumnDef.push(
       {
         id: 'converter',
@@ -250,14 +242,12 @@ export class CarsListTableDataSource extends TableDataSource<Car> {
   }
 
   public buildTableFiltersDef(): TableFilterDef[] {
-    if (this.authorizationService.isAdmin()) {
-      return [
-        new UserTableFilter().getFilterDef(),
-        new CarMakerTableFilter().getFilterDef(),
-
-      ];
+    const tableFilterDef: TableFilterDef[] = [];
+    if (this.authorizationService.canListUsers()) {
+      tableFilterDef.push(new UserTableFilter().getFilterDef());
     }
-    return [];
+    tableFilterDef.push(new CarMakerTableFilter().getFilterDef());
+    return tableFilterDef;
   }
 
   public buildTableActionsRightDef(): TableActionDef[] {

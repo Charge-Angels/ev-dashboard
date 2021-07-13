@@ -4,6 +4,7 @@ import { MatDialog, MatDialogConfig, MatDialogRef } from '@angular/material/dial
 import { MatSelectChange } from '@angular/material/select';
 import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
+import { UsersDialogComponent } from 'shared/dialogs/users/users-dialog.component';
 import { DialogMode } from 'types/Authorization';
 
 import { AuthorizationService } from '../../../services/authorization.service';
@@ -16,19 +17,14 @@ import { Car, CarCatalog, CarConverter, CarConverterType, CarType } from '../../
 import { ActionResponse } from '../../../types/DataResult';
 import { KeyValue, RestResponse } from '../../../types/GlobalType';
 import { HTTPError } from '../../../types/HTTPError';
-import { ButtonType } from '../../../types/Table';
-import { UserCar } from '../../../types/User';
+import { User } from '../../../types/User';
 import { Cars } from '../../../utils/Cars';
 import { Constants } from '../../../utils/Constants';
 import { Utils } from '../../../utils/Utils';
-import { CarUsersEditableTableDataSource } from './car-users-editable-table-data-source';
 
 @Component({
   selector: 'app-car',
   templateUrl: 'car.component.html',
-  providers: [
-    CarUsersEditableTableDataSource
-  ],
 })
 export class CarComponent implements OnInit {
   @Input() public currentCarID!: string;
@@ -39,6 +35,7 @@ export class CarComponent implements OnInit {
   public selectedCarCatalog: CarCatalog;
   public carCatalogConverters: { type: CarConverterType; value: string; converter: CarConverter }[] = [];
   public isAdmin: boolean;
+  public canListUsers: boolean;
   public isPool = false;
   public readOnly = true;
 
@@ -54,7 +51,8 @@ export class CarComponent implements OnInit {
   public isDefault!: AbstractControl;
   public type!: AbstractControl;
   public noImage = Constants.NO_IMAGE;
-  public owner = true;
+  public user!: AbstractControl;
+  public userID!: AbstractControl;
   public carTypes: KeyValue[] = [
     { key: CarType.COMPANY, value: 'cars.company_car' },
     { key: CarType.PRIVATE, value: 'cars.private_car' }
@@ -63,7 +61,6 @@ export class CarComponent implements OnInit {
   private car: Car;
 
   public constructor(
-    public carUsersEditableTableDataSource: CarUsersEditableTableDataSource,
     public spinnerService: SpinnerService,
     private centralServerService: CentralServerService,
     private messageService: MessageService,
@@ -72,8 +69,8 @@ export class CarComponent implements OnInit {
     private router: Router,
     private dialog: MatDialog,
     private authorizationService: AuthorizationService) {
-    this.isBasic = this.authorizationService.isBasic();
     this.isAdmin = this.authorizationService.isAdmin();
+    this.canListUsers = this.authorizationService.canListUsers();
     if (this.isAdmin) {
       this.carTypes.push({ key: CarType.POOL_CAR, value: 'cars.pool_car' });
     }
@@ -108,6 +105,12 @@ export class CarComponent implements OnInit {
         Validators.compose([
           Validators.required,
         ])),
+      user: new FormControl('',
+        Validators.compose([
+        ])),
+      userID: new FormControl('',
+        Validators.compose([
+        ])),
       isDefault: new FormControl(''),
       type: new FormControl(CarType.COMPANY,
         Validators.compose([
@@ -120,6 +123,8 @@ export class CarComponent implements OnInit {
     this.licensePlate = this.formGroup.controls['licensePlate'];
     this.carCatalogID = this.formGroup.controls['carCatalogID'];
     this.carCatalog = this.formGroup.controls['carCatalog'];
+    this.user = this.formGroup.controls['user'];
+    this.userID = this.formGroup.controls['userID'];
     this.isDefault = this.formGroup.controls['isDefault'];
     this.converterType = this.formGroup.controls['converterType'];
     this.converter = this.formGroup.controls['converter'];
@@ -127,19 +132,10 @@ export class CarComponent implements OnInit {
     this.readOnly = (this.dialogMode === DialogMode.VIEW);
     // Default
     this.converterType.disable();
-    if (!this.isBasic) {
-      this.isDefault.disable();
-    }
-    // Check for Updates
-    this.carUsersEditableTableDataSource.getTableChangedSubject().subscribe((carUsers: UserCar[]) => {
-      this.formGroup.markAsDirty();
-    });
     // Register events
     this.type.valueChanges.subscribe((value) => {
       this.isPool = (value === CarType.POOL_CAR);
     });
-    // Set car
-    this.carUsersEditableTableDataSource.setCarID(this.currentCarID);
     this.loadCar();
   }
 
@@ -171,24 +167,14 @@ export class CarComponent implements OnInit {
         this.converterType.setValue(car.converter.type);
         this.carCatalog.setValue(Utils.buildCarCatalogName(car.carCatalog));
         this.carCatalogImage = car.carCatalog.image;
-        // Set default car
-        if (this.readOnly) {
-          // Fill in props
-          const foundCarUser = car.carUsers.find((carUser) => carUser.user.id === this.centralServerService.getLoggedUser().id);
-          this.isDefault.setValue(foundCarUser.default);
-          this.owner = foundCarUser.owner;
-          if (!foundCarUser.owner) {
-            this.carCatalog.disable();
-            this.converterType.disable();
-            this.vin.disable();
-            this.licensePlate.disable();
-            this.type.disable();
-          }
+        this.isDefault.setValue(car.default);
+        this.userID.setValue(car.userID);
+        if (car.user) {
+          this.user.setValue(Utils.buildUserFullName(car.user));
         }
         this.formGroup.updateValueAndValidity();
         this.formGroup.markAsPristine();
         this.formGroup.markAllAsTouched();
-        // Yes, get image
       }, (error) => {
         this.spinnerService.hide();
         switch (error.status) {
@@ -201,6 +187,35 @@ export class CarComponent implements OnInit {
         }
       });
     }
+  }
+
+  public clearUser() {
+    this.car.user = null;
+    this.car.userID = null;
+    this.user.setValue(null);
+    this.userID.setValue(null);
+    this.formGroup.markAsDirty();
+  }
+
+  public assignUser() {
+    // Create the dialog
+    const dialogConfig = new MatDialogConfig();
+    dialogConfig.panelClass = 'transparent-dialog-container';
+    dialogConfig.data = {
+      title: 'cars.assign_user',
+      validateButtonTitle: 'general.select',
+      sitesAdminOnly: true,
+      rowMultipleSelection: false,
+    };
+    // Open
+    this.dialog.open(UsersDialogComponent, dialogConfig).afterClosed().subscribe((result) => {
+      if (!Utils.isEmptyArray(result) && result[0].objectRef) {
+        const user = ((result[0].objectRef) as User);
+        this.user.setValue(Utils.buildUserFullName(user));
+        this.userID.setValue(user.id);
+        this.formGroup.markAsDirty();
+      }
+    });
   }
 
   public closeDialog(saved: boolean = false) {
@@ -247,16 +262,6 @@ export class CarComponent implements OnInit {
   }
 
   private updateCar(car: Car) {
-    // Set updated/removed users
-    if (this.isAdmin) {
-      car['usersUpserted'] = this.carUsersEditableTableDataSource.getUpsertedUsers();
-      car['usersRemoved'] = this.carUsersEditableTableDataSource.getRemovedCarUsers();
-    } else {
-      const foundCarUser = this.car.carUsers.find((carUser) => carUser.user.id === this.centralServerService.getLoggedUser().id);
-      foundCarUser.default = this.isDefault.value as boolean;
-      car['usersUpserted'] = [foundCarUser];
-    }
-    // Update
     this.spinnerService.show();
     this.centralServerService.updateCar(car).subscribe((response: ActionResponse) => {
       this.spinnerService.hide();
@@ -283,15 +288,9 @@ export class CarComponent implements OnInit {
   }
 
   private createCar(car: Car, forced = false) {
-    // Set updated/removed users
-    if (this.isAdmin) {
-      car['usersUpserted'] = this.carUsersEditableTableDataSource.getUpsertedUsers();
-    } else {
-      // Create User Car
-      car['usersUpserted'] = [{
-        user: this.centralServerService.getLoggedUser(),
-        default: this.isDefault.value as boolean,
-      }];
+    // Set logged user
+    if (!this.canListUsers) {
+      car.userID = this.centralServerService.getLoggedUser().id;
     }
     this.spinnerService.show();
     this.centralServerService.createCar(car, forced).subscribe((response: ActionResponse) => {
@@ -306,17 +305,6 @@ export class CarComponent implements OnInit {
       this.spinnerService.hide();
       // Check status
       switch (error.status) {
-        // Email already exists
-        case HTTPError.CAR_ALREADY_EXIST_ERROR_DIFFERENT_USER:
-          this.dialogService.createAndShowYesNoDialog(
-            this.translateService.instant('settings.car.assign_user_to_car_dialog_title'),
-            this.translateService.instant('settings.car.assign_user_to_car_dialog_confirm'),
-          ).subscribe((response) => {
-            if (response === ButtonType.YES) {
-              this.createCar(car, true);
-            }
-          });
-          break;
         // Car already created by this user
         case HTTPError.CAR_ALREADY_EXIST_ERROR:
           this.messageService.showErrorMessage('cars.car_exist');
@@ -325,7 +313,6 @@ export class CarComponent implements OnInit {
         case HTTPError.USER_ALREADY_ASSIGNED_TO_CAR:
           this.messageService.showErrorMessage('cars.user_already_assigned');
           break;
-        // No longer exists!
         default:
           Utils.handleHttpError(error, this.router, this.messageService, this.centralServerService, 'cars.create_error');
       }
